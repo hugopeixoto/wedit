@@ -9,4 +9,4 @@ NMEMB="$(echo "$HEADER" | grep "nmemb=" | cut -d= -f2)"
 BITS="$(( $SIZE / $CHANNELS * 8 ))"
 
 echo ffmpeg -f s${BITS}le -ar "$HZ" -ac "$CHANNELS" -i - "$1" >&2
-ffmpeg -f "s${BITS}le" -ar "$HZ" -ac "$CHANNELS" -i - -f wav -
+ffmpeg -f "s${BITS}le" -ar "$HZ" -ac "$CHANNELS" -i - -c:a "pcm_s${BITS}le" -f wav -

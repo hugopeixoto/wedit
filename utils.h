@@ -7,7 +7,6 @@ struct stream_t {
   uint16_t size;
   uint16_t channels;
   uint32_t hz;
-  uint32_t nmemb;
 };
 
 void leu16write(uint16_t n, uint8_t* b);
@@ -22,5 +21,8 @@ uint32_t leu32(const uint8_t* b);
 void pipe();
 void copy(uint32_t bytes);
 void skip(uint32_t bytes);
+
+int parse_spcm(struct stream_t* stream);
+int write_spcm(const struct stream_t* stream);
 
 #endif

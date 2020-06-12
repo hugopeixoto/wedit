@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include "utils.h"
 
 void leu16write(uint16_t n, uint8_t* b) {
@@ -57,10 +58,44 @@ void skip(uint32_t bytes) {
 }
 
 void pipe() {
-  uint8_t buffer[BUFSIZ];
+  uint8_t buffer[1<<20];
   int n;
 
-  while ((n = fread(buffer, 1, BUFSIZ, stdin)) != EOF) {
+  while ((n = fread(buffer, 1, sizeof(buffer), stdin)) != 0) {
     fwrite(buffer, n, 1, stdout);
   }
+}
+
+int parse_spcm(struct stream_t* stream) {
+  uint8_t buffer[1<<14];
+
+  if (fread(buffer, 12, 1, stdin) != 1) {
+    fprintf(stderr, "unable to read SPCM header\n");
+    return -1;
+  }
+
+  if (memcmp(buffer, "SPCM", 4) != 0) {
+    fprintf(stderr, "expected SPCM magic number\n");
+    return -1;
+  }
+
+  stream->size = leu16(buffer + 4);
+  stream->channels = leu16(buffer + 4 + 2);
+  stream->hz = leu32(buffer + 4 + 2 + 2);
+
+  return 0;
+}
+
+int write_spcm(const struct stream_t* stream) {
+  uint8_t buffer[12];
+
+  memcpy(buffer, "SPCM", 4);
+
+  leu16write(stream->size, buffer + 4);
+  leu16write(stream->channels, buffer + 4 + 2);
+  leu32write(stream->hz, buffer + 4 + 2 + 2);
+
+  fwrite(buffer, 1, sizeof(buffer), stdout);
+
+  return 0;
 }

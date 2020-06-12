@@ -5,7 +5,7 @@
 
 #include "utils.h"
 
-int parse_wav_header(uint16_t* size, uint16_t* channels, uint32_t* hz, uint32_t* nmemb) {
+int parse_wav_header(uint16_t* size, uint16_t* channels, uint32_t* hz) {
   uint8_t buffer[1<<14];
 
   fread(buffer, 4, 1, stdin); // "RIFF"
@@ -55,29 +55,20 @@ int parse_wav_header(uint16_t* size, uint16_t* channels, uint32_t* hz, uint32_t*
   }
 
   fread(buffer, 4, 1, stdin); // stream size
-  *nmemb = leu32(buffer)/(*size);
 
   return 0;
 }
 
 int main(int argc, char* argv[]) {
   struct stream_t stream;
-  uint8_t buffer[2 + 2 + 4 + 4];
 
-  if (parse_wav_header(&stream.size, &stream.channels, &stream.hz, &stream.nmemb) != 0) {
+  if (parse_wav_header(&stream.size, &stream.channels, &stream.hz) != 0) {
     fprintf(stderr, "invalid wav header\n");
     return -1;
   }
 
-  leu16write(stream.size, buffer);
-  leu16write(stream.channels, buffer + 2);
-  leu32write(stream.hz, buffer + 2 + 2);
-  leu32write(stream.nmemb, buffer + 2 + 2 + 4);
-
-  fwrite("SPCM", 1, 4, stdout);
-  fwrite(buffer, 1, sizeof(buffer), stdout);
-
-  copy(stream.size*stream.nmemb);
+  write_spcm(&stream);
+  pipe();
   return 0;
 }
 

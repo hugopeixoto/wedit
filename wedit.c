@@ -8,38 +8,10 @@ const int32_t GAIN_MULTIPLIER = 100;
 
 const int DEBUG = 0;
 
-int parse_spcm(struct stream_t* stream) {
-  uint8_t buffer[1<<14];
-
-  fread(buffer, 4 + 2 + 2 + 4 + 4, 1, stdin);
-
-  if (memcmp(buffer, "SPCM", 4) != 0) {
-    if (DEBUG) fprintf(stderr, "expected SPCM\n");
-    return -1;
-  }
-
-  stream->size = leu16(buffer+4);
-  stream->channels = leu16(buffer+4+2);
-  stream->hz = leu32(buffer+4+2+2);
-  stream->nmemb = leu32(buffer+4+2+2+4);
-
-  return 0;
-}
-
 struct filter_t {
   uint32_t silence;
   int32_t gain[2];
 };
-
-void filter2stderr(struct filter_t* filter) {
-  if (DEBUG) fprintf(
-    stderr,
-    "silence: %8X, gain: %d %d\n",
-    filter->silence,
-    filter->gain[0],
-    filter->gain[1]
-  );
-}
 
 void filter_sample(struct stream_t* stream, struct filter_t* filter, int32_t* samples) {
   uint32_t bits_per_channel = stream->size * 8 / stream->channels;
@@ -121,12 +93,12 @@ void pipe_filtered(struct stream_t* stream, struct filter_t* filter) {
 }
 
 int next(int argc, char* argv[], struct stream_t* stream, struct filter_t* filter) {
-  if (argc < 1)
+  if (argc < 1) {
     return -1;
+  }
 
   if (!strcmp(argv[0], "skip")) {
     if (argc < 2) exit(-1);
-    if (DEBUG) fprintf(stderr, "instruction %s %s\n", argv[0], argv[1]);
 
     uint64_t seconds = atoi(argv[1]);
 
@@ -137,7 +109,6 @@ int next(int argc, char* argv[], struct stream_t* stream, struct filter_t* filte
 
   if (!strcmp(argv[0], "skipms")) {
     if (argc < 2) exit(-1);
-    if (DEBUG) fprintf(stderr, "instruction %s %s\n", argv[0], argv[1]);
 
     uint64_t ms = atoi(argv[1]);
 
@@ -148,29 +119,22 @@ int next(int argc, char* argv[], struct stream_t* stream, struct filter_t* filte
 
   if (!strcmp(argv[0], "only")) {
     if (argc < 2) exit(-1);
-    if (DEBUG) fprintf(stderr, "instruction %s %s\n", argv[0], argv[1]);
 
     uint32_t channel = atoi(argv[1]);
 
     filter->silence = ~(1 << channel);
 
-    filter2stderr(filter);
-
     return 2;
   }
 
   if (!strcmp(argv[0], "soundall")) {
-    if (DEBUG) fprintf(stderr, "instruction %s\n", argv[0]);
-
     filter->silence = 0;
-    filter2stderr(filter);
 
     return 1;
   }
 
   if (!strcmp(argv[0], "copy")) {
     if (argc < 2) exit(-1);
-    if (DEBUG) fprintf(stderr, "instruction %s %s\n", argv[0], argv[1]);
 
     uint32_t seconds = atoi(argv[1]);
 
@@ -181,7 +145,6 @@ int next(int argc, char* argv[], struct stream_t* stream, struct filter_t* filte
 
   if (!strcmp(argv[0], "copyms")) {
     if (argc < 2) exit(-1);
-    if (DEBUG) fprintf(stderr, "instruction %s %s\n", argv[0], argv[1]);
 
     uint64_t ms = atoi(argv[1]);
 
@@ -192,23 +155,20 @@ int next(int argc, char* argv[], struct stream_t* stream, struct filter_t* filte
 
   if (!strcmp(argv[0], "gain")) {
     if (argc < 3) exit(-1);
-    if (DEBUG) fprintf(stderr, "instruction %s %s %s\n", argv[0], argv[1], argv[2]);
 
     uint32_t channel = atoi(argv[1]);
     uint32_t gain = atoi(argv[2]);
 
     filter->gain[channel] = gain;
 
-    filter2stderr(filter);
-
     return 3;
   }
 
   if (!strcmp(argv[0], "exit")) {
-    if (DEBUG) fprintf(stderr, "instruction %s\n", argv[0]);
     exit(0);
   }
 
+  fprintf(stderr, "unknown instruction: %s\n", argv[0]);
   exit(-1);
 }
 
@@ -216,34 +176,12 @@ int main(int argc, char* argv[]) {
   struct stream_t stream;
   struct filter_t filter = { 0, { GAIN_MULTIPLIER, GAIN_MULTIPLIER } };
 
-  uint32_t start, finish;
-  uint32_t pos = 0;
-
   if (parse_spcm(&stream) != 0) {
     fprintf(stderr, "invalid SPCM header\n");
     return -1;
   }
 
-  if (DEBUG) fprintf(stderr, "gain [%u %u]\n", filter.gain[0], filter.gain[1]);
-
-  if (DEBUG) fprintf(
-    stderr,
-    "size: %hu, channels: %u, hz: %u, nmemb: %u\n",
-    stream.size,
-    stream.channels,
-    stream.hz,
-    stream.nmemb
-  );
-
-  uint8_t buffer[2 + 2 + 4 + 4];
-
-  leu16write(stream.size, buffer);
-  leu16write(stream.channels, buffer + 2);
-  leu32write(stream.hz, buffer + 2 + 2);
-  leu32write(stream.nmemb, buffer + 2 + 2 + 4);
-
-  fwrite("SPCM", 1, 4, stdout);
-  fwrite(buffer, 1, sizeof(buffer), stdout);
+  write_spcm(&stream);
 
   argc--;
   argv++;
