@@ -1,2 +1,2 @@
 #!/usr/bin/env sh
-ffplay -f s16le -ar 44100 -ac 2 -loglevel quiet -nodisp -
+ffplay -f s24le -ar 44100 -ac 2 -loglevel quiet -nodisp -

@@ -1,0 +1,12 @@
+#!/usr/bin/env sh
+
+HEADER="$(spcm-info)"
+
+SIZE="$(echo "$HEADER" | grep "size=" | cut -d= -f2)"
+CHANNELS="$(echo "$HEADER" | grep "channels=" | cut -d= -f2)"
+HZ="$(echo "$HEADER" | grep "hz=" | cut -d= -f2)"
+NMEMB="$(echo "$HEADER" | grep "nmemb=" | cut -d= -f2)"
+BITS="$(( $SIZE / $CHANNELS * 8 ))"
+
+echo ffmpeg -f s${BITS}le -ar "$HZ" -ac "$CHANNELS" -i - "$1" >&2
+ffmpeg -f "s${BITS}le" -ar "$HZ" -ac "$CHANNELS" -i - -f wav -
